@@ -115,6 +115,9 @@ function init() {
     createWorld();
     car = createCar();
     createTraffic();
+
+    // render initial frame so user sees scene before بدء اللعب
+    renderer.render(scene, camera);
 }
 
 // ======================
@@ -272,7 +275,7 @@ function crash() {
 
     cameraShake();
 
-    alert("💥 Crash!");
+    alert("💥 تحطّم!");
 
     setTimeout(resetGame, 1200);
 }
@@ -306,19 +309,21 @@ function applyShake() {
 function animate() {
     requestAnimationFrame(animate);
 
-    if (!started || paused) return;
+    // only update game state when started and not paused
+    if (started && !paused) {
+        updateCar();
+        updateTraffic();
+        applyShake();
 
-    updateCar();
-    updateTraffic();
-    applyShake();
+        distance += speed * 2;
+        score = Math.floor(distance);
 
-    distance += speed * 2;
-    score = Math.floor(distance);
+        document.getElementById("speed").innerText = Math.round(speed * 80);
+        document.getElementById("dist").innerText = Math.floor(distance);
+        document.getElementById("score").innerText = score;
+    }
 
-    document.getElementById("speed").innerText = Math.round(speed * 80);
-    document.getElementById("dist").innerText = Math.floor(distance);
-    document.getElementById("score").innerText = score;
-
+    // always render so user sees scene before start
     renderer.render(scene, camera);
 }
 
@@ -328,6 +333,7 @@ function animate() {
 function createStartScreen() {
 
     const s = document.createElement("div");
+    s.id = "startScreen";
     s.style = `
     position:fixed;top:0;left:0;width:100%;height:100%;
     background:rgba(0,0,0,0.8);
@@ -337,9 +343,9 @@ function createStartScreen() {
     `;
 
     s.innerHTML = `
-    <h1>🚙 Monster Truck Race V2</h1>
+    <h1>🚙 سباق شاحنات الوحوش V2</h1>
     <button onclick="startGame()" style="padding:15px 30px;font-size:18px">
-        Start Game
+        ابدأ اللعب
     </button>
     `;
 
@@ -348,7 +354,8 @@ function createStartScreen() {
 
 function startGame() {
     started = true;
-    document.querySelector("div").style.display = "none";
+    const s = document.getElementById("startScreen");
+    if (s) s.remove();
 }
 
 // ======================
