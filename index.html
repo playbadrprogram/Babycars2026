@@ -3,20 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محاكي سباق السيارات - نسخة التوافق القصوى</title>
+    <title>محاكي سباق السيارات - النسخة المستقرة المضمونة</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #050b14; font-family: sans-serif; }
         #mobilePanel { position: fixed; bottom: 20px; left: 20px; z-index: 1000; display: flex; flex-wrap: wrap; width: 220px; direction: ltr; }
         #mobilePanel button { width: 65px; height: 65px; font-size: 16px; margin: 4px; background: rgba(255,255,255,0.9); border: 2px solid #222; border-radius: 14px; cursor: pointer; -webkit-user-select: none; user-select: none; font-weight: bold; }
         #mobilePanel button:active { background: #ff0055; color: white; }
         #hudPanel { position: fixed; top: 10px; right: 10px; color: white; font-size: 16px; background: rgba(0,0,0,0.7); padding: 12px; z-index: 1000; border-radius: 8px; text-align: right; direction: rtl; border: 1px solid #ff0055; }
-        #errorMessage { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(255,0,0,0.8); padding: 20px; border-radius: 10px; text-align: center; z-index: 9999; direction: rtl; }
+        #statusMessage { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.85); padding: 20px; border-radius: 10px; text-align: center; z-index: 9999; direction: rtl; border: 1px solid #ff0055; font-size: 18px; }
     </style>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-<div id="errorMessage">عذراً، متصفحك أو هاتفك لا يدعم تقنية WebGL لتشغيل الألعاب ثلاثية الأبعاد.</div>
+<div id="statusMessage">جاري تحميل محرك الرسوميات ثلاثي الأبعاد...</div>
 
 <div id="mobilePanel">
     <button id="gasBtn">بنزين</button>
@@ -26,39 +27,40 @@
 </div>
 
 <script>
-    window.addEventListener('DOMContentLoaded', () => {
-        // 1. الفحص السريع لدعم WebGL
-        function hasWebGL() {
-            try {
-                const canvas = document.createElement('canvas');
-                return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
-            } catch (e) { return false; }
+    // آلية ذكية للتحقق من وجود المكتبة وتكرار المحاولة في حال تأخر الشبكة
+    function checkAndStart() {
+        if (typeof THREE !== 'undefined') {
+            // إخفاء رسالة التحميل وبدء اللعبة فوراً
+            const statusDiv = document.getElementById('statusMessage');
+            if(statusDiv) statusDiv.style.display = 'none';
+            initGame();
+        } else {
+            // إذا لم تتحمل بعد، نحاول مجدداً بعد نصف ثانية ولن ينهار الكود
+            setTimeout(checkAndStart, 500);
         }
+    }
 
-        if (!hasWebGL()) {
-            document.getElementById('errorMessage').style.display = 'block';
-            return;
-        }
+    // انتهاء تحميل الصفحة بالكامل وبدء الفحص
+    window.addEventListener('load', checkAndStart);
 
+    function initGame() {
         try {
             // =====================================
-            // إعداد المشهد الأساسي الخفيف
+            // إعداد المشهد ثلاثي الأبعاد الآمن
             // =====================================
             const scene = new THREE.Scene();
             scene.background = new THREE.Color(0x050b14); 
 
-            // كاميرا بمدى رؤية آمن وقريب (1000) لتخفيف الضغط
             const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
             
-            const renderer = new THREE.WebGLRenderer({ antialias: false }); // إيقاف مانع التعرج لزيادة الأداء
+            const renderer = new THREE.WebGLRenderer({ antialias: false }); 
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            // إضاءة بسيطة جداً
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
             scene.add(ambientLight);
 
-            // الأرضية بمادة أساسية لا تتأثر بالإضاءة المعقدة (MeshBasicMaterial)
+            // الأرضية
             const ground = new THREE.Mesh(
                 new THREE.PlaneGeometry(5000, 5000),
                 new THREE.MeshBasicMaterial({ color: 0x11151c })
@@ -80,7 +82,6 @@
             asphalt.position.y = -0.5;
             roadGroup.add(asphalt);
 
-            // خطوط مسارات مبسطة جداً
             for (let z = -roadLength/2; z <= roadLength/2; z += 150) {
                 const centerLine = new THREE.Mesh(new THREE.BoxGeometry(2, 0.2, 40), new THREE.MeshBasicMaterial({ color: 0xffffff }));
                 centerLine.position.set(0, 0.1, z);
@@ -89,7 +90,7 @@
             scene.add(roadGroup);
 
             // =====================================
-            // ناطحات السحاب (توزيع أقل ومواد أخف)
+            // المباني المحيطة
             // =====================================
             function createSimpleBuilding(x, z) {
                 const w = 50;
@@ -104,7 +105,7 @@
                 scene.add(bMesh);
             }
 
-            for (let i = 0; i < 60; i++) {
+            for (let i = 0; i < 40; i++) {
                 let bx = (Math.random() - 0.5) * 600;
                 let bz = (Math.random() - 0.5) * roadLength;
                 if (Math.abs(bx) > roadWidth / 2 + 30) {
@@ -113,21 +114,19 @@
             }
 
             // =====================================
-            // تصميم مجسم سيارة سباق مبسط ومضمون
+            // مجسم السيارة الرياضية
             // =====================================
             const raceCar = new THREE.Group();
             
-            // جسم السيارة السفلي
             const carBody = new THREE.Mesh(new THREE.BoxGeometry(4, 1, 8), new THREE.MeshBasicMaterial({ color: 0xe63946 }));
             carBody.position.y = 0.5;
             raceCar.add(carBody);
 
-            // كابينة القيادة
             const carCabin = new THREE.Mesh(new THREE.BoxGeometry(3, 1, 3), new THREE.MeshBasicMaterial({ color: 0x111111 }));
             carCabin.position.set(0, 1.3, 0);
             raceCar.add(carCabin);
 
-            raceCar.position.set(0, 0, 300); // نقطة البداية
+            raceCar.position.set(0, 0, 300); 
             scene.add(raceCar);
 
             // =====================================
@@ -162,7 +161,6 @@
                 if (keys["left"]) raceCar.position.x -= carSpeed * 0.4;
                 if (keys["right"]) raceCar.position.x += carSpeed * 0.4;
 
-                // تحريك السيارة للأمام وإعادتها لتأمين حلقة لانهائية بسيطة
                 raceCar.position.z -= carSpeed * 3;
                 if (raceCar.position.z < -roadLength/2) {
                     raceCar.position.z = roadLength/2;
@@ -173,7 +171,6 @@
                 requestAnimationFrame(animate);
                 updatePhysics();
 
-                // الكاميرا تتبع السيارة بدقة وأمان
                 camera.position.set(raceCar.position.x, raceCar.position.y + 4, raceCar.position.z + 14);
                 camera.lookAt(raceCar.position.x, raceCar.position.y + 1, raceCar.position.z - 10);
 
@@ -191,11 +188,9 @@
             animate();
 
         } catch (error) {
-            console.error(error);
-            document.getElementById('errorMessage').style.display = 'block';
-            document.getElementById('errorMessage').innerText = "حدث خطأ أثناء تشغيل اللعبة: " + error.message;
+            alert("فشل تشغيل محرك الرسوميات: " + error.message);
         }
-    });
+    }
 </script>
 </body>
 </html>
