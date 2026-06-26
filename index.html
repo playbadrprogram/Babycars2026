@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>Monster Truck Race 3D Ultra</title>
+<title>Monster Truck Race 3D Ultra FIX</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -60,10 +60,9 @@ button {
 <script>
 
 // ======================
-// BASIC SETUP
-// ======================
 let scene, camera, renderer;
 let car;
+
 let speed = 0;
 let maxSpeed = 3.2;
 let acceleration = 0.03;
@@ -84,8 +83,6 @@ createStartScreen();
 animate();
 
 // ======================
-// INIT
-// ======================
 function init() {
 
     scene = new THREE.Scene();
@@ -102,35 +99,20 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // 🌞 LIGHTING (IMPORTANT FOR REALISM)
-
     const ambient = new THREE.AmbientLight(0xffffff, 0.45);
+    const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+    sun.position.set(120, 180, 80);
 
-const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-sun.position.set(120, 180, 80);
+    scene.add(ambient, sun);
 
-scene.add(ambient, sun);
-
-// 🎥 تحسين الإحساس بالسرعة
-camera.fov = 70;
-camera.updateProjectionMatrix();
-    
-//    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-
-//    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-//    sun.position.set(80, 120, 50);
-
-//    scene.add(ambient, sun);
-
-//    camera.position.set(0, 5, 10);
+    camera.fov = 70;
+    camera.updateProjectionMatrix();
 
     createWorld();
     car = createCar();
     createTraffic();
 }
 
-// ======================
-// WORLD
 // ======================
 function createWorld() {
 
@@ -147,121 +129,28 @@ function createWorld() {
         new THREE.MeshLambertMaterial({ color: 0x333333 })
     );
     scene.add(road);
-
-    for (let i = 0; i < 80; i++) {
-        const line = new THREE.Mesh(
-            new THREE.BoxGeometry(0.3, 0.1, 5),
-            new THREE.MeshLambertMaterial({ color: 0xffffff })
-        );
-        line.position.set(0, 0.3, -i * 25);
-        scene.add(line);
-    }
 }
 
-// ======================
-// 🚗 REALISTIC CAR
 // ======================
 function createCar() {
 
     const car = new THREE.Group();
 
-    // ======================
-    // LOWER CHASSIS
-    // ======================
-    const chassis = new THREE.Mesh(
-        new THREE.BoxGeometry(3.8, 0.7, 6.5),
-        new THREE.MeshStandardMaterial({
-            color: 0x111111,
-            roughness: 0.9,
-            metalness: 0.2
-        })
-    );
-    chassis.position.y = 1.0;
-    car.add(chassis);
-
-    // ======================
-    // MAIN BODY (high detail feel)
-    // ======================
     const body = new THREE.Mesh(
         new THREE.BoxGeometry(3.4, 1.0, 4.8),
-        new THREE.MeshStandardMaterial({
-            color: 0xc1121f,
-            metalness: 0.5,
-            roughness: 0.35
-        })
+        new THREE.MeshStandardMaterial({ color: 0xc1121f })
     );
-
-    body.position.set(0, 1.8, -0.2);
+    body.position.y = 1.5;
     car.add(body);
 
-    // ======================
-    // FRONT HOOD (sloped)
-    // ======================
-    const hood = new THREE.Mesh(
-        new THREE.BoxGeometry(3.4, 0.6, 2.2),
-        new THREE.MeshStandardMaterial({
-            color: 0x9d0208,
-            metalness: 0.4,
-            roughness: 0.3
-        })
-    );
-
-    hood.position.set(0, 1.55, 2.3);
-    hood.rotation.x = -0.18;
-    car.add(hood);
-
-    // ======================
-    // CABIN GLASS
-    // ======================
-    const cabin = new THREE.Mesh(
-        new THREE.BoxGeometry(2.7, 1.3, 2.6),
-        new THREE.MeshStandardMaterial({
-            color: 0x0a0a0a,
-            transparent: true,
-            opacity: 0.72,
-            metalness: 0.1,
-            roughness: 0.2
-        })
-    );
-
-    cabin.position.set(0, 2.5, -1.2);
-    car.add(cabin);
-
-    // ======================
-    // BUMPERS
-    // ======================
-    const bumperMat = new THREE.MeshStandardMaterial({
-        color: 0x222222,
-        metalness: 0.7,
-        roughness: 0.25
-    });
-
-    const frontBumper = new THREE.Mesh(
-        new THREE.BoxGeometry(3.9, 0.4, 0.8),
-        bumperMat
-    );
-    frontBumper.position.set(0, 1.0, 3.5);
-    car.add(frontBumper);
-
-    const backBumper = frontBumper.clone();
-    backBumper.position.z = -3.5;
-    car.add(backBumper);
-
-    // ======================
-    // BIG OFF-ROAD WHEELS
-    // ======================
-    const wheelGeo = new THREE.CylinderGeometry(1.05, 1.05, 0.75, 32);
-    const wheelMat = new THREE.MeshStandardMaterial({
-        color: 0x0b0b0b,
-        roughness: 1,
-        metalness: 0.1
-    });
+    const wheelGeo = new THREE.CylinderGeometry(1, 1, 0.7, 32);
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
 
     const wheelPos = [
-        [-1.95, 0.95, 2.4],
-        [1.95, 0.95, 2.4],
-        [-1.95, 0.95, -2.4],
-        [1.95, 0.95, -2.4],
+        [-1.8, 1, 2.2],
+        [1.8, 1, 2.2],
+        [-1.8, 1, -2.2],
+        [1.8, 1, -2.2],
     ];
 
     wheelPos.forEach(p => {
@@ -271,117 +160,12 @@ function createCar() {
         car.add(w);
     });
 
-    // ======================
-    // HEADLIGHTS (glow effect)
-    // ======================
-    const lightMat = new THREE.MeshBasicMaterial({ color: 0xfff3b0 });
-
-    const l1 = new THREE.Mesh(new THREE.SphereGeometry(0.13), lightMat);
-    const l2 = l1.clone();
-
-    l1.position.set(-1.3, 1.5, 3.6);
-    l2.position.set(1.3, 1.5, 3.6);
-
-    car.add(l1, l2);
-
-    // ======================
-    // POSITION
-    // ======================
     car.position.set(0, 0, 5);
     scene.add(car);
 
     return car;
 }
-    
- //   function createCar() {
 
-//    const car = new THREE.Group();
-
-    // BODY (main frame)
-//    const body = new THREE.Mesh(
-  //      new THREE.BoxGeometry(3.4, 1.2, 6),
-   //     new THREE.MeshStandardMaterial({
-    //        color: 0xe63946,
-  //          metalness: 0.3,
- //           roughness: 0.4
- //       })
-//    );
-//    body.position.y = 1.5;
-//    car.add(body);
-
-    // CABIN (glass)
-//    const cabin = new THREE.Mesh(
- //       new THREE.BoxGeometry(2.5, 1.2, 3),
- //       new THREE.MeshStandardMaterial({
-//            color: 0x111111,
-//            transparent: true,
-//            opacity: 0.75,
-//            metalness: 0.1,
-//            roughness: 0.2
-//        })
-//    );
-//    cabin.position.set(0, 2.3, -0.8);
-//    car.add(cabin);
-
-    // FRONT BUMPER
-//    const bumperMat = new THREE.MeshStandardMaterial({
-//        color: 0x222222,
-//        metalness: 0.7,
-//        roughness: 0.3
-//    });
-
-//    const frontBumper = new THREE.Mesh(
-//        new THREE.BoxGeometry(3.5, 0.4, 0.8),
-//        bumperMat
-//    );
-//    frontBumper.position.set(0, 1.1, 3.2);
-//    car.add(frontBumper);
-
- //   const backBumper = frontBumper.clone();
-//    backBumper.position.z = -3.2;
-//    car.add(backBumper);
-
-    // 🚗 WHEELS (realistic truck tires)
-//    const wheelGeo = new THREE.CylinderGeometry(0.9, 0.9, 0.7, 32);
-//    const wheelMat = new THREE.MeshStandardMaterial({
-//        color: 0x111111,
- //       roughness: 0.9,
- //       metalness: 0.1
-//    });
-
-//    const wheelPos = [
-//        [-1.8, 1, 2.2],
-//        [1.8, 1, 2.2],
-//        [-1.8, 1, -2.2],
-//        [1.8, 1, -2.2],
-//    ];
-
-//    wheelPos.forEach(p => {
-//        const w = new THREE.Mesh(wheelGeo, wheelMat);
- //       w.rotation.z = Math.PI / 2;
-//        w.position.set(p[0], p[1], p[2]);
- //       car.add(w);
-//    });
-
-    // 💡 HEADLIGHTS
-//    const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffaa });
-
-//    const l1 = new THREE.Mesh(new THREE.SphereGeometry(0.12), lightMat);
-//    const l2 = l1.clone();
-
-//    l1.position.set(-1.2, 1.4, 3.4);
-//    l2.position.set(1.2, 1.4, 3.4);
-
-//    car.add(l1, l2);
-
-//    car.position.set(0, 0, 5);
-//    scene.add(car);
-
-//    return car;
-//}
-
-// ======================
-// TRAFFIC
 // ======================
 function createTrafficCar() {
 
@@ -390,17 +174,16 @@ function createTrafficCar() {
     const body = new THREE.Mesh(
         new THREE.BoxGeometry(2.6, 1, 4.5),
         new THREE.MeshStandardMaterial({
-            color: Math.random() * 0xffffff,
-            roughness: 0.5
+            color: Math.random() * 0xffffff
         })
     );
-    body.position.y = 1.2;
 
+    body.position.y = 1.2;
     c.add(body);
 
     resetTraffic(c);
-
     scene.add(c);
+
     return c;
 }
 
@@ -416,8 +199,6 @@ function createTraffic() {
 }
 
 // ======================
-// INPUT
-// ======================
 window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
 window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
@@ -431,11 +212,7 @@ function tap(dir) {
 }
 
 // ======================
-// UPDATE CAR
-// ======================
 function updateCar() {
-
-    if (!car) return;
 
     if (keys["arrowup"]) speed += acceleration;
     if (keys["arrowdown"]) speed -= acceleration * 1.5;
@@ -446,7 +223,8 @@ function updateCar() {
     if (keys["arrowleft"]) car.position.x -= 0.15;
     if (keys["arrowright"]) car.position.x += 0.15;
 
-    car.position.z -= speed * 2;
+    // ❌ تم إلغاء حركة السيارة للأمام (تصحيح مهم)
+    // car.position.z -= speed * 2;
 
     camera.position.x += (car.position.x - camera.position.x) * 0.08;
     camera.position.z = car.position.z + 10;
@@ -455,27 +233,25 @@ function updateCar() {
 }
 
 // ======================
-// TRAFFIC UPDATE
-// ======================
 function updateTraffic() {
 
     traffic.forEach(t => {
 
-        t.position.z += 0.6 + speed * 2;
+        // ✔ حركة العالم نحو اللاعب
+        t.position.z += speed * 2 + 0.6;
 
         if (t.position.z > car.position.z + 20) {
             resetTraffic(t);
         }
 
-        if (Math.abs(t.position.x - car.position.x) < 2 &&
-            Math.abs(t.position.z - car.position.z) < 3) {
+        // ✔ تصادم أدق
+        if (Math.abs(t.position.x - car.position.x) < 1.4 &&
+            Math.abs(t.position.z - car.position.z) < 2.2) {
             crash();
         }
     });
 }
 
-// ======================
-// CRASH
 // ======================
 function crash() {
 
@@ -495,8 +271,6 @@ function resetGame() {
     speed = 0;
 }
 
-// ======================
-// LOOP
 // ======================
 function animate() {
 
@@ -519,11 +293,11 @@ function animate() {
 }
 
 // ======================
-// START SCREEN
-// ======================
 function createStartScreen() {
 
     const s = document.createElement("div");
+    s.id = "startScreen";
+
     s.style = `
     position:fixed;top:0;left:0;width:100%;height:100%;
     background:rgba(0,0,0,0.8);
@@ -547,11 +321,9 @@ function createStartScreen() {
 
 function startGame() {
     started = true;
-    document.querySelector("div").remove();
+    document.getElementById("startScreen").remove();
 }
 
-// ======================
-// RESIZE
 // ======================
 window.addEventListener("resize", () => {
     camera.aspect = innerWidth / innerHeight;
