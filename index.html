@@ -103,14 +103,26 @@ function init() {
     document.body.appendChild(renderer.domElement);
 
     // 🌞 LIGHTING (IMPORTANT FOR REALISM)
-    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
 
-    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-    sun.position.set(80, 120, 50);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.45);
 
-    scene.add(ambient, sun);
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(120, 180, 80);
 
-    camera.position.set(0, 5, 10);
+scene.add(ambient, sun);
+
+// 🎥 تحسين الإحساس بالسرعة
+camera.fov = 70;
+camera.updateProjectionMatrix();
+    
+//    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+
+//    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+//    sun.position.set(80, 120, 50);
+
+//    scene.add(ambient, sun);
+
+//    camera.position.set(0, 5, 10);
 
     createWorld();
     car = createCar();
