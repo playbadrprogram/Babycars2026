@@ -3,19 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سباق السيارات الاحترافي - نسخة النهار مع الهرن</title>
+    <title>سباق الطبيعة الخلابة - سيارات الـ Monster Truck</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #87CEEB; font-family: sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
+        body { margin: 0; overflow: hidden; background-color: #7ce5ff; font-family: sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
         #mobilePanel { position: fixed; bottom: 20px; left: 20px; z-index: 1000; display: flex; flex-wrap: wrap; width: 230px; direction: ltr; }
         #mobilePanel button { width: 65px; height: 65px; font-size: 15px; margin: 4px; background: rgba(255,255,255,0.9); border: 2px solid #222; border-radius: 14px; cursor: pointer; font-weight: bold; }
-        #mobilePanel button:active { background: #ff0055; color: white; }
-        /* تصميم خاص ومميز لزر التنبيه */
+        #mobilePanel button:active { background: #00b4d8; color: white; }
         #hornBtn { background: #ffcc00 !important; color: #000; }
         #hornBtn:active { background: #e6b800 !important; color: #fff; }
         
-        #hudPanel { position: fixed; top: 10px; right: 10px; color: white; font-size: 16px; background: rgba(0,0,0,0.6); padding: 12px; z-index: 1000; border-radius: 8px; text-align: right; direction: rtl; border: 1px solid #00b4d8; }
+        #hudPanel { position: fixed; top: 10px; right: 10px; color: white; font-size: 16px; background: rgba(0,0,0,0.5); padding: 12px; z-index: 1000; border-radius: 8px; text-align: right; direction: rtl; border: 1px solid #2a9d8f; }
         #clearCacheBtn { position: fixed; top: 10px; left: 10px; z-index: 5000; padding: 10px; background: #ffaa00; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
-        #crashScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 0, 0, 0.4); display: none; justify-content: center; align-items: center; z-index: 9999; }
+        #crashScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 0, 0, 0.3); display: none; justify-content: center; align-items: center; z-index: 9999; }
         #crashBox { background: white; padding: 30px; border-radius: 15px; text-align: center; border: 4px solid #222; direction: rtl; }
         #crashBox h2 { margin: 0 0 15px 0; color: #e63946; }
         #crashBox button { padding: 10px 20px; font-size: 16px; background: #222; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
@@ -30,8 +29,8 @@
 
 <div id="crashScreen">
     <div id="crashBox">
-        <h2>💥 لقد اصطدمت بالسيارة!</h2>
-        <p>حاول التجاوز بحذر في المرة القادمة.</p>
+        <h2>💥 لقد اصطدمت!</h2>
+        <p>عد للسباق وحافظ على جمال الطبيعة من حولك.</p>
         <button onclick="restartGame()">إعادة المحاولة 🔄</button>
     </div>
 </div>
@@ -53,20 +52,13 @@
     let trafficCars = [];
     let isCrashed = false;
     const roadLength = 4000;
-    const roadWidth = 60;
+    const roadWidth = 55;
     
-    // إعداد ملفات الصوت (المحرك + التنبيه)
     let engineSound = new Audio('engain.mp3');
     engineSound.loop = true;
     let hornSound = new Audio('horn.mp3'); 
     let audioStarted = false;
-
-    function startAudio() {
-        if (!audioStarted && !isCrashed) {
-            engineSound.play().catch(e => console.log("في انتظار التفاعل"));
-            audioStarted = true;
-        }
-    }
+    let isPlayingSound = false;
 
     window.addEventListener('load', () => {
         if (typeof THREE === 'undefined') return;
@@ -77,7 +69,7 @@
         document.getElementById('hudPanel').style.display = 'block';
         
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB); // سماء نهارية
+        scene.background = new THREE.Color(0x7ce5ff); 
 
         camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
         
@@ -85,142 +77,161 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.4); 
-        scene.add(ambientLight);
-
-        const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
-        sunLight.position.set(20, 50, 20);
+        scene.add(new THREE.AmbientLight(0xffffff, 1.3));
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        sunLight.position.set(30, 60, 20);
         scene.add(sunLight);
 
-        // الطريق الرمادي الفاتح في النهار
-        const asphalt = new THREE.Mesh(new THREE.BoxGeometry(roadWidth, 0.5, roadLength), new THREE.MeshBasicMaterial({ color: 0x555555 }));
+        // مروج خضراء
+        const greenMeadow = new THREE.Mesh(new THREE.PlaneGeometry(5000, 5000), new THREE.MeshBasicMaterial({ color: 0x4caf50 }));
+        greenMeadow.rotation.x = -Math.PI / 2;
+        greenMeadow.position.y = -0.3;
+        scene.add(greenMeadow);
+
+        // طريق ريفي
+        const asphalt = new THREE.Mesh(new THREE.BoxGeometry(roadWidth, 0.5, roadLength), new THREE.MeshBasicMaterial({ color: 0x666d75 }));
         asphalt.position.y = -0.25;
         scene.add(asphalt);
 
         for (let z = -roadLength/2; z <= roadLength/2; z += 120) {
-            const centerLine = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 40), new THREE.MeshBasicMaterial({ color: 0xffcc00 }));
+            const centerLine = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.1, 35), new THREE.MeshBasicMaterial({ color: 0xffeb3b }));
             centerLine.position.set(0, 0.05, z);
             scene.add(centerLine);
         }
 
-        // المباني النهارية
-        const bColors = [0xdddddd, 0xbbbbbb, 0x999999, 0xaaaaaa];
-        for (let i = 0; i < 40; i++) {
-            let bx = (Math.random() - 0.5) * 600;
+        // غابة الأشجار المخروطية الجميلة
+        for (let i = 0; i < 70; i++) {
+            let bx = (Math.random() - 0.5) * 650;
             let bz = (Math.random() - 0.5) * roadLength;
-            if (Math.abs(bx) > roadWidth / 2 + 20) {
-                const h = 100 + Math.random() * 200;
-                const bMesh = new THREE.Mesh(new THREE.BoxGeometry(40, h, 40), new THREE.MeshBasicMaterial({ color: bColors[i % bColors.length] }));
-                bMesh.position.set(bx, h / 2, bz);
-                scene.add(bMesh);
+            if (Math.abs(bx) > roadWidth / 2 + 15) {
+                const treeGroup = new THREE.Group();
+                const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.2, 5, 8), new THREE.MeshBasicMaterial({ color: 0x795548 }));
+                trunk.position.y = 2.5;
+                treeGroup.add(trunk);
+                const leaves = new THREE.Mesh(new THREE.ConeGeometry(4, 12, 8), new THREE.MeshBasicMaterial({ color: 0x2e7d32 }));
+                leaves.position.y = 9;
+                treeGroup.add(leaves);
+                treeGroup.position.set(bx, 0, bz);
+                scene.add(treeGroup);
             }
         }
 
-        // سيارة اللاعب
-        raceCar = createCustomCar(0xe63946);
+        // إنشاء سيارة اللاعب بشكل الـ Monster Truck (اللون الأحمر المبهج)
+        raceCar = createMonsterCar(0xe63946);
         raceCar.position.set(0, 0, 400);
         scene.add(raceCar);
 
-        // سيارات المرور
-        const colors = [0x0056b3, 0x00b4d8, 0x2a9d8f, 0xe76f51];
-        for (let i = 0; i < 8; i++) {
-            let tCar = createCustomCar(colors[i % colors.length]);
+        // سيارات المرور بنفس النمط الضخم والمرح
+        const colors = [0x0288d1, 0x009688, 0xff9800, 0x9c27b0];
+        for (let i = 0; i < 7; i++) {
+            let tCar = createMonsterCar(colors[i % colors.length]);
             resetTrafficCar(tCar);
-            tCar.position.z = -200 - (i * 250);
+            tCar.position.z = -200 - (i * 280);
             scene.add(tCar);
             trafficCars.push(tCar);
         }
 
-        // ربط الأزرار العادية
         bindBtn("gasBtn", "gas"); bindBtn("brakeBtn", "brake");
         bindBtn("leftBtn", "left"); bindBtn("rightBtn", "right");
 
-        // ربط وتشغيل زر التنبيه الخاص
         const hBtn = document.getElementById("hornBtn");
         if(hBtn) {
-            const playHorn = (e) => {
-                e.preventDefault();
-                startAudio();
-                if(!isCrashed) {
-                    hornSound.currentTime = 0; // إعادة الصوت من البداية عند تكرار الضغط
-                    hornSound.play().catch(err => console.log(err));
-                }
-            };
-            hBtn.addEventListener("touchstart", playHorn);
-            hBtn.addEventListener("mousedown", playHorn);
+            hBtn.addEventListener("touchstart", (e) => { e.preventDefault(); if(!isCrashed) { hornSound.currentTime = 0; hornSound.play(); } });
+            hBtn.addEventListener("mousedown", () => { if(!isCrashed) { hornSound.currentTime = 0; hornSound.play(); } });
         }
 
         animate();
     }
 
-    function createCustomCar(bodyColor) {
+    // دالة بناء سيارة الدفع الرباعي العملاقة (Monster Truck) المطابقة لصورة المتجر
+    function createMonsterCar(bodyColor) {
         const carGroup = new THREE.Group();
         
-        const body = new THREE.Mesh(new THREE.BoxGeometry(4.6, 1.1, 8.5), new THREE.MeshBasicMaterial({ color: bodyColor }));
-        body.position.y = 0.75;
+        // 1. جسم سيارة مرتفع وسميك ومستدير الحواف نسبياً
+        const body = new THREE.Mesh(new THREE.BoxGeometry(5.2, 1.8, 8.0), new THREE.MeshBasicMaterial({ color: bodyColor }));
+        body.position.y = 2.0; // مرفوعة عن الأرض
         carGroup.add(body);
 
-        const cabin = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.9, 3.8), new THREE.MeshBasicMaterial({ color: 0x222222 }));
-        cabin.position.set(0, 1.6, -0.4);
+        // 2. كابينة الركاب (الزجاج) المرتفعة ومستديرة الشكل
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(4.0, 1.4, 4.0), new THREE.MeshBasicMaterial({ color: 0x222222 }));
+        cabin.position.set(0, 3.5, -0.5);
         carGroup.add(cabin);
 
-        const spoiler = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.15, 1.0), new THREE.MeshBasicMaterial({ color: 0x222222 }));
-        spoiler.position.set(0, 1.8, 3.8);
-        carGroup.add(spoiler);
+        // 3. كشافات الإضاءة العلوية على السقف المميزة لسيارات الطرق الوعرة
+        const lightBar = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.4, 0.4), new THREE.MeshBasicMaterial({ color: 0x111111 }));
+        lightBar.position.set(0, 4.3, 0.5);
+        carGroup.add(lightBar);
+        for(let x = -1.2; x <= 1.2; x += 0.8) {
+            const lightSpot = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.3, 8), new THREE.MeshBasicMaterial({ color: 0xffeb3b }));
+            lightSpot.rotation.x = Math.PI / 2;
+            lightSpot.position.set(x, 4.3, 0.7);
+            carGroup.add(lightSpot);
+        }
 
-        const tailL = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.25, 0.1), new THREE.MeshBasicMaterial({ color: 0xcc0000 }));
-        tailL.position.set(-1.6, 0.75, 4.26);
-        const tailR = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.25, 0.1), new THREE.MeshBasicMaterial({ color: 0xcc0000 }));
-        tailR.position.set(1.6, 0.75, 4.26);
-        carGroup.add(tailL, tailR);
+        // 4. مواسير العادم المرتفعة بالخلف (الكروم) كما بالصورة الكرتونية
+        const pipe1 = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 2.5, 8), new THREE.MeshBasicMaterial({ color: 0xcccccc }));
+        pipe1.position.set(-1.5, 3.5, 3.2);
+        pipe1.rotation.x = -0.2;
+        const pipe2 = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 2.5, 8), new THREE.MeshBasicMaterial({ color: 0xcccccc }));
+        pipe2.position.set(1.5, 3.5, 3.2);
+        pipe2.rotation.x = -0.2;
+        carGroup.add(pipe1, pipe2);
 
-        const wGeom = new THREE.CylinderGeometry(0.65, 0.65, 0.7, 12);
-        const wMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
-        const positions = [[-2.4, -2.2], [2.4, -2.2], [-2.4, 2.2], [2.4, 2.2]];
+        // 5. عجلات ضخمة جداً بارزة وعريضة للخارج (Monster Wheels)
+        const wheelGeom = new THREE.CylinderGeometry(1.4, 1.4, 1.5, 16); // تكبير القطر والعرض
+        const wheelMat = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
+        const rimGeom = new THREE.CylinderGeometry(0.7, 0.7, 1.6, 12); // جنط داخلي لامع
+        const rimMat = new THREE.MeshBasicMaterial({ color: 0xdddddd });
+
+        // مواقع العجلات الأربعة (متباعدة للخارج لتظهر القوة والثبات)
+        const wheelPositions = [
+            [-3.2, -2.5], [3.2, -2.5], 
+            [-3.2, 2.5],  [3.2, 2.5]
+        ];
         
-        positions.forEach(p => {
-            const w = new THREE.Mesh(wGeom, wMat);
-            w.rotation.z = Math.PI / 2;
-            w.position.set(p[0], 0.65, p[1]);
-            carGroup.add(w);
+        wheelPositions.forEach(pos => {
+            const wheelInstance = new THREE.Mesh(wheelGeom, wheelMat);
+            wheelInstance.rotation.z = Math.PI / 2;
+            wheelInstance.position.set(pos[0], 1.4, pos[1]);
+            
+            const rimInstance = new THREE.Mesh(rimGeom, rimMat);
+            rimInstance.rotation.z = Math.PI / 2;
+            rimInstance.position.set(pos[0], 1.4, pos[1]);
+            
+            carGroup.add(wheelInstance, rimInstance);
         });
 
         return carGroup;
     }
 
     function resetTrafficCar(car) {
-        const lanes = [-18, 0, 18];
+        const lanes = [-15, 0, 15];
         car.position.x = lanes[Math.floor(Math.random() * lanes.length)];
-        car.position.z = raceCar.position.z - (600 + Math.random() * 400);
+        car.position.z = raceCar.position.z - (600 + Math.random() * 450);
         car.userData = { speed: 1 + Math.random() * 1.5 };
     }
 
     function bindBtn(id, key) {
         const btn = document.getElementById(id);
         if (!btn) return;
-        const press = (e) => { e.preventDefault(); startAudio(); if(!isCrashed) keys[key] = true; };
-        const release = () => { keys[key] = false; };
-        
-        btn.addEventListener("touchstart", press); btn.addEventListener("touchend", release);
-        btn.addEventListener("mousedown", press); btn.addEventListener("mouseup", release);
+        btn.addEventListener("touchstart", (e) => { e.preventDefault(); if(!isCrashed) keys[key] = true; });
+        btn.addEventListener("touchend", () => { keys[key] = false; });
+        btn.addEventListener("mousedown", () => { if(!isCrashed) keys[key] = true; });
+        btn.addEventListener("mouseup", () => { keys[key] = false; });
     }
 
     function checkCollisions() {
         const playerBox = new THREE.Box3().setFromObject(raceCar);
-
         trafficCars.forEach(tCar => {
             const trafficBox = new THREE.Box3().setFromObject(tCar);
             if (playerBox.intersectsBox(trafficBox)) {
-                triggerCrash();
+                isCrashed = true;
+                carSpeed = 0;
+                engineSound.pause();
+                isPlayingSound = false;
+                document.getElementById('crashScreen').style.display = 'flex';
             }
         });
-    }
-
-    function triggerCrash() {
-        isCrashed = true;
-        carSpeed = 0;
-        engineSound.pause();
-        document.getElementById('crashScreen').style.display = 'flex';
     }
 
     function restartGame() {
@@ -228,36 +239,49 @@
         raceCar.position.set(0, 0, 400);
         trafficCars.forEach(resetTrafficCar);
         document.getElementById('crashScreen').style.display = 'none';
-        if (audioStarted) engineSound.play();
+    }
+
+    function handleEngineAudio() {
+        if (isCrashed) return;
+
+        if (carSpeed > 0.05) {
+            if (!isPlayingSound) {
+                engineSound.play().catch(e => console.log("تفاعل مطلوب"));
+                isPlayingSound = true;
+            }
+            engineSound.playbackRate = 0.75 + (carSpeed / 5.5) * 1.4;
+        } else {
+            if (isPlayingSound) {
+                engineSound.pause();
+                isPlayingSound = false;
+            }
+        }
     }
 
     function updatePhysics() {
         if (isCrashed) return;
 
-        if (keys["gas"]) carSpeed += 0.07;
-        else if (keys["brake"]) carSpeed -= 0.15;
-        else carSpeed *= 0.97;
+        if (keys["gas"]) carSpeed += 0.06;
+        else if (keys["brake"]) carSpeed -= 0.14;
+        else carSpeed *= 0.96;
 
         carSpeed = Math.max(0, Math.min(5.5, carSpeed));
 
         if (keys["left"]) raceCar.position.x -= carSpeed * 0.35;
         if (keys["right"]) raceCar.position.x += carSpeed * 0.35;
 
-        raceCar.position.x = Math.max(-roadWidth/2 + 3, Math.min(roadWidth/2 - 3, raceCar.position.x));
+        raceCar.position.x = Math.max(-roadWidth/2 + 4, Math.min(roadWidth/2 - 4, raceCar.position.x));
         raceCar.position.z -= carSpeed * 3.5;
 
         trafficCars.forEach(tCar => {
             tCar.position.z -= tCar.userData.speed * 3.5;
-            if (tCar.position.z > raceCar.position.z + 150) {
+            if (tCar.position.z > raceCar.position.z + 180) {
                 resetTrafficCar(tCar);
             }
         });
 
         checkCollisions();
-
-        if (audioStarted && !isCrashed) {
-            engineSound.playbackRate = 0.85 + (carSpeed / 5.5) * 1.3;
-        }
+        handleEngineAudio();
     }
 
     function animate() {
@@ -265,8 +289,9 @@
         updatePhysics();
 
         if (raceCar) {
-            camera.position.set(raceCar.position.x, raceCar.position.y + 4.5, raceCar.position.z + 16);
-            camera.lookAt(raceCar.position.x, raceCar.position.y + 1.2, raceCar.position.z - 15);
+            // ضبط زاوية الكاميرا لتناسب حجم السيارات الجديد والضخم
+            camera.position.set(raceCar.position.x, raceCar.position.y + 6.5, raceCar.position.z + 22);
+            camera.lookAt(raceCar.position.x, raceCar.position.y + 1.8, raceCar.position.z - 15);
             document.getElementById('speedVal').innerText = Math.round(carSpeed * 42);
         }
 
