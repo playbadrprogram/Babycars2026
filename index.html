@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>Monster Truck Race 3D V2</title>
+<title>Monster Truck Race 3D Ultra</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -22,7 +22,6 @@ body {
     padding: 10px;
     border-radius: 8px;
     z-index: 10;
-    font-size: 14px;
 }
 
 #mobileControls {
@@ -66,13 +65,12 @@ button {
 let scene, camera, renderer;
 let car;
 let speed = 0;
-let maxSpeed = 3;
+let maxSpeed = 3.2;
 let acceleration = 0.03;
 let friction = 0.97;
 
 let keys = {};
 let started = false;
-let paused = false;
 let isCrashed = false;
 
 let distance = 0;
@@ -104,20 +102,19 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    const light = new THREE.AmbientLight(0xffffff, 0.8);
-    const sun = new THREE.DirectionalLight(0xffffff, 1);
-    sun.position.set(50, 100, 50);
+    // 🌞 LIGHTING (IMPORTANT FOR REALISM)
+    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
 
-    scene.add(light, sun);
+    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+    sun.position.set(80, 120, 50);
+
+    scene.add(ambient, sun);
 
     camera.position.set(0, 5, 10);
 
     createWorld();
     car = createCar();
     createTraffic();
-
-    // render initial frame so user sees scene before بدء اللعب
-    renderer.render(scene, camera);
 }
 
 // ======================
@@ -150,19 +147,88 @@ function createWorld() {
 }
 
 // ======================
-// CAR
+// 🚗 REALISTIC CAR
 // ======================
 function createCar() {
 
     const car = new THREE.Group();
 
+    // BODY (main frame)
     const body = new THREE.Mesh(
-        new THREE.BoxGeometry(3, 1.2, 6),
-        new THREE.MeshLambertMaterial({ color: 0xe63946 })
+        new THREE.BoxGeometry(3.4, 1.2, 6),
+        new THREE.MeshStandardMaterial({
+            color: 0xe63946,
+            metalness: 0.3,
+            roughness: 0.4
+        })
     );
     body.position.y = 1.5;
-
     car.add(body);
+
+    // CABIN (glass)
+    const cabin = new THREE.Mesh(
+        new THREE.BoxGeometry(2.5, 1.2, 3),
+        new THREE.MeshStandardMaterial({
+            color: 0x111111,
+            transparent: true,
+            opacity: 0.75,
+            metalness: 0.1,
+            roughness: 0.2
+        })
+    );
+    cabin.position.set(0, 2.3, -0.8);
+    car.add(cabin);
+
+    // FRONT BUMPER
+    const bumperMat = new THREE.MeshStandardMaterial({
+        color: 0x222222,
+        metalness: 0.7,
+        roughness: 0.3
+    });
+
+    const frontBumper = new THREE.Mesh(
+        new THREE.BoxGeometry(3.5, 0.4, 0.8),
+        bumperMat
+    );
+    frontBumper.position.set(0, 1.1, 3.2);
+    car.add(frontBumper);
+
+    const backBumper = frontBumper.clone();
+    backBumper.position.z = -3.2;
+    car.add(backBumper);
+
+    // 🚗 WHEELS (realistic truck tires)
+    const wheelGeo = new THREE.CylinderGeometry(0.9, 0.9, 0.7, 32);
+    const wheelMat = new THREE.MeshStandardMaterial({
+        color: 0x111111,
+        roughness: 0.9,
+        metalness: 0.1
+    });
+
+    const wheelPos = [
+        [-1.8, 1, 2.2],
+        [1.8, 1, 2.2],
+        [-1.8, 1, -2.2],
+        [1.8, 1, -2.2],
+    ];
+
+    wheelPos.forEach(p => {
+        const w = new THREE.Mesh(wheelGeo, wheelMat);
+        w.rotation.z = Math.PI / 2;
+        w.position.set(p[0], p[1], p[2]);
+        car.add(w);
+    });
+
+    // 💡 HEADLIGHTS
+    const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffaa });
+
+    const l1 = new THREE.Mesh(new THREE.SphereGeometry(0.12), lightMat);
+    const l2 = l1.clone();
+
+    l1.position.set(-1.2, 1.4, 3.4);
+    l2.position.set(1.2, 1.4, 3.4);
+
+    car.add(l1, l2);
 
     car.position.set(0, 0, 5);
     scene.add(car);
@@ -178,22 +244,23 @@ function createTrafficCar() {
     const c = new THREE.Group();
 
     const body = new THREE.Mesh(
-        new THREE.BoxGeometry(2.5, 1, 4.5),
-        new THREE.MeshLambertMaterial({
-            color: Math.random() * 0xffffff
+        new THREE.BoxGeometry(2.6, 1, 4.5),
+        new THREE.MeshStandardMaterial({
+            color: Math.random() * 0xffffff,
+            roughness: 0.5
         })
     );
     body.position.y = 1.2;
 
     c.add(body);
 
-    resetTrafficCar(c);
+    resetTraffic(c);
 
     scene.add(c);
     return c;
 }
 
-function resetTrafficCar(c) {
+function resetTraffic(c) {
     c.position.x = lanes[Math.floor(Math.random() * lanes.length)];
     c.position.z = car.position.z - 200 - Math.random() * 400;
 }
@@ -220,14 +287,14 @@ function tap(dir) {
 }
 
 // ======================
-// CAR UPDATE
+// UPDATE CAR
 // ======================
 function updateCar() {
 
     if (!car) return;
 
-    if (keys["arrowup"] || keys["w"]) speed += acceleration;
-    if (keys["arrowdown"] || keys["s"]) speed -= acceleration * 1.5;
+    if (keys["arrowup"]) speed += acceleration;
+    if (keys["arrowdown"]) speed -= acceleration * 1.5;
 
     speed *= friction;
     speed = Math.max(0, Math.min(maxSpeed, speed));
@@ -253,7 +320,7 @@ function updateTraffic() {
         t.position.z += 0.6 + speed * 2;
 
         if (t.position.z > car.position.z + 20) {
-            resetTrafficCar(t);
+            resetTraffic(t);
         }
 
         if (Math.abs(t.position.x - car.position.x) < 2 &&
@@ -273,8 +340,6 @@ function crash() {
     isCrashed = true;
     speed = 0;
 
-    cameraShake();
-
     alert("💥 تحطّم!");
 
     setTimeout(resetGame, 1200);
@@ -287,33 +352,16 @@ function resetGame() {
 }
 
 // ======================
-// CAMERA SHAKE
-// ======================
-let shake = 0;
-
-function cameraShake() {
-    shake = 20;
-}
-
-function applyShake() {
-    if (shake > 0) {
-        camera.position.x += (Math.random() - 0.5) * 0.3;
-        camera.position.y += (Math.random() - 0.5) * 0.3;
-        shake--;
-    }
-}
-
-// ======================
 // LOOP
 // ======================
 function animate() {
+
     requestAnimationFrame(animate);
 
-    // only update game state when started and not paused
-    if (started && !paused) {
+    if (started && !isCrashed) {
+
         updateCar();
         updateTraffic();
-        applyShake();
 
         distance += speed * 2;
         score = Math.floor(distance);
@@ -323,7 +371,6 @@ function animate() {
         document.getElementById("score").innerText = score;
     }
 
-    // always render so user sees scene before start
     renderer.render(scene, camera);
 }
 
@@ -333,17 +380,19 @@ function animate() {
 function createStartScreen() {
 
     const s = document.createElement("div");
-    s.id = "startScreen";
     s.style = `
     position:fixed;top:0;left:0;width:100%;height:100%;
     background:rgba(0,0,0,0.8);
-    display:flex;flex-direction:column;
-    justify-content:center;align-items:center;
-    color:white;z-index:9999;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    color:white;
+    z-index:9999;
     `;
 
     s.innerHTML = `
-    <h1>🚙 سباق شاحنات الوحوش V2</h1>
+    <h1>🚙 Monster Truck Ultra</h1>
     <button onclick="startGame()" style="padding:15px 30px;font-size:18px">
         ابدأ اللعب
     </button>
@@ -354,8 +403,7 @@ function createStartScreen() {
 
 function startGame() {
     started = true;
-    const s = document.getElementById("startScreen");
-    if (s) s.remove();
+    document.querySelector("div").remove();
 }
 
 // ======================
