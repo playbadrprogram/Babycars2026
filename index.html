@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>Monster Truck Race 3D</title>
+<title>Monster Truck Race 3D V2</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -22,6 +22,7 @@ body {
     padding: 10px;
     border-radius: 8px;
     z-index: 10;
+    font-size: 14px;
 }
 
 #mobileControls {
@@ -32,6 +33,7 @@ body {
     display: flex;
     gap: 10px;
 }
+
 button {
     padding: 12px;
     font-size: 16px;
@@ -43,38 +45,49 @@ button {
 
 <body>
 
-<div id="hud">السرعة: <span id="speed">0</span> km/h</div>
+<div id="hud">
+🚗 السرعة: <span id="speed">0</span><br>
+🏁 المسافة: <span id="dist">0</span><br>
+⭐ النقاط: <span id="score">0</span><br>
+</div>
 
 <div id="mobileControls">
-<button onclick="tapKey('arrowup')">⬆️</button>
-<button onclick="tapKey('arrowleft')">⬅️</button>
-<button onclick="tapKey('arrowdown')">⬇️</button>
-<button onclick="tapKey('arrowright')">➡️</button>
+<button onclick="tap('up')">⬆️</button>
+<button onclick="tap('left')">⬅️</button>
+<button onclick="tap('down')">⬇️</button>
+<button onclick="tap('right')">➡️</button>
 </div>
 
 <script>
 
-// =====================
+// ======================
 // BASIC SETUP
-// =====================
+// ======================
 let scene, camera, renderer;
-let car, speed = 0;
-let maxSpeed = 2.5;
+let car;
+let speed = 0;
+let maxSpeed = 3;
+let acceleration = 0.03;
+let friction = 0.97;
+
 let keys = {};
 let started = false;
 let paused = false;
 let isCrashed = false;
 
-let trafficCars = [];
+let distance = 0;
+let score = 0;
+
+let traffic = [];
 let lanes = [-4, 0, 4];
 
 init();
 createStartScreen();
 animate();
 
-// =====================
+// ======================
 // INIT
-// =====================
+// ======================
 function init() {
 
     scene = new THREE.Scene();
@@ -91,31 +104,31 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    const light1 = new THREE.AmbientLight(0xffffff, 0.8);
-    const light2 = new THREE.DirectionalLight(0xffffff, 1);
-    light2.position.set(50, 100, 50);
+    const light = new THREE.AmbientLight(0xffffff, 0.8);
+    const sun = new THREE.DirectionalLight(0xffffff, 1);
+    sun.position.set(50, 100, 50);
 
-    scene.add(light1, light2);
+    scene.add(light, sun);
 
     camera.position.set(0, 5, 10);
 
-    createEnvironment();
+    createWorld();
     car = createCar();
-    initTraffic();
+    createTraffic();
 }
 
-// =====================
-// ENVIRONMENT
-// =====================
-function createEnvironment() {
+// ======================
+// WORLD
+// ======================
+function createWorld() {
 
-    const grass = new THREE.Mesh(
+    const ground = new THREE.Mesh(
         new THREE.PlaneGeometry(2000, 2000),
         new THREE.MeshLambertMaterial({ color: 0x4caf50 })
     );
-    grass.rotation.x = -Math.PI / 2;
-    grass.position.y = -0.5;
-    scene.add(grass);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.5;
+    scene.add(ground);
 
     const road = new THREE.Mesh(
         new THREE.BoxGeometry(20, 0.5, 2000),
@@ -123,7 +136,7 @@ function createEnvironment() {
     );
     scene.add(road);
 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 80; i++) {
         const line = new THREE.Mesh(
             new THREE.BoxGeometry(0.3, 0.1, 5),
             new THREE.MeshLambertMaterial({ color: 0xffffff })
@@ -133,9 +146,9 @@ function createEnvironment() {
     }
 }
 
-// =====================
+// ======================
 // CAR
-// =====================
+// ======================
 function createCar() {
 
     const car = new THREE.Group();
@@ -147,90 +160,97 @@ function createCar() {
     body.position.y = 1.5;
 
     car.add(body);
+
     car.position.set(0, 0, 5);
     scene.add(car);
 
     return car;
 }
 
-// =====================
+// ======================
 // TRAFFIC
-// =====================
+// ======================
 function createTrafficCar() {
 
-    const car = new THREE.Group();
+    const c = new THREE.Group();
 
     const body = new THREE.Mesh(
         new THREE.BoxGeometry(2.5, 1, 4.5),
-        new THREE.MeshLambertMaterial({ color: 0x2196f3 })
+        new THREE.MeshLambertMaterial({
+            color: Math.random() * 0xffffff
+        })
     );
     body.position.y = 1.2;
 
-    car.add(body);
+    c.add(body);
 
-    car.position.set(
-        lanes[Math.floor(Math.random() * lanes.length)],
-        0,
-        car.position.z - 200 - Math.random() * 300
-    );
+    resetTrafficCar(c);
 
-    scene.add(car);
-    return car;
+    scene.add(c);
+    return c;
 }
 
-function initTraffic() {
-    for (let i = 0; i < 6; i++) {
-        trafficCars.push(createTrafficCar());
+function resetTrafficCar(c) {
+    c.position.x = lanes[Math.floor(Math.random() * lanes.length)];
+    c.position.z = car.position.z - 200 - Math.random() * 400;
+}
+
+function createTraffic() {
+    for (let i = 0; i < 8; i++) {
+        traffic.push(createTrafficCar());
     }
 }
 
-// =====================
+// ======================
 // INPUT
-// =====================
+// ======================
 window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
 window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
-function tapKey(k) {
-    keys[k] = true;
-    setTimeout(() => keys[k] = false, 150);
+function tap(dir) {
+    if (dir === "up") keys["arrowup"] = true;
+    if (dir === "down") keys["arrowdown"] = true;
+    if (dir === "left") keys["arrowleft"] = true;
+    if (dir === "right") keys["arrowright"] = true;
+
+    setTimeout(() => keys = {}, 150);
 }
 
-// =====================
-// UPDATE CAR
-// =====================
+// ======================
+// CAR UPDATE
+// ======================
 function updateCar() {
 
     if (!car) return;
 
-    if (keys["w"] || keys["arrowup"]) speed += 0.02;
-    if (keys["s"] || keys["arrowdown"]) speed -= 0.03;
+    if (keys["arrowup"] || keys["w"]) speed += acceleration;
+    if (keys["arrowdown"] || keys["s"]) speed -= acceleration * 1.5;
 
-    speed *= 0.98;
+    speed *= friction;
     speed = Math.max(0, Math.min(maxSpeed, speed));
 
-    if (keys["a"] || keys["arrowleft"]) car.position.x -= 0.15;
-    if (keys["d"] || keys["arrowright"]) car.position.x += 0.15;
+    if (keys["arrowleft"]) car.position.x -= 0.15;
+    if (keys["arrowright"]) car.position.x += 0.15;
 
     car.position.z -= speed * 2;
 
-    camera.position.x += (car.position.x - camera.position.x) * 0.1;
+    camera.position.x += (car.position.x - camera.position.x) * 0.08;
     camera.position.z = car.position.z + 10;
     camera.position.y = 6;
     camera.lookAt(car.position);
 }
 
-// =====================
+// ======================
 // TRAFFIC UPDATE
-// =====================
+// ======================
 function updateTraffic() {
 
-    trafficCars.forEach(t => {
+    traffic.forEach(t => {
 
-        t.position.z += 0.5 + speed * 2;
+        t.position.z += 0.6 + speed * 2;
 
         if (t.position.z > car.position.z + 20) {
-            t.position.z = car.position.z - 200 - Math.random() * 300;
-            t.position.x = lanes[Math.floor(Math.random() * lanes.length)];
+            resetTrafficCar(t);
         }
 
         if (Math.abs(t.position.x - car.position.x) < 2 &&
@@ -240,9 +260,9 @@ function updateTraffic() {
     });
 }
 
-// =====================
+// ======================
 // CRASH
-// =====================
+// ======================
 function crash() {
 
     if (isCrashed) return;
@@ -250,9 +270,11 @@ function crash() {
     isCrashed = true;
     speed = 0;
 
-    alert("💥 لقد اصطدمت!");
+    cameraShake();
 
-    setTimeout(resetGame, 1000);
+    alert("💥 Crash!");
+
+    setTimeout(resetGame, 1200);
 }
 
 function resetGame() {
@@ -261,9 +283,26 @@ function resetGame() {
     speed = 0;
 }
 
-// =====================
+// ======================
+// CAMERA SHAKE
+// ======================
+let shake = 0;
+
+function cameraShake() {
+    shake = 20;
+}
+
+function applyShake() {
+    if (shake > 0) {
+        camera.position.x += (Math.random() - 0.5) * 0.3;
+        camera.position.y += (Math.random() - 0.5) * 0.3;
+        shake--;
+    }
+}
+
+// ======================
 // LOOP
-// =====================
+// ======================
 function animate() {
     requestAnimationFrame(animate);
 
@@ -271,34 +310,40 @@ function animate() {
 
     updateCar();
     updateTraffic();
+    applyShake();
 
-    document.getElementById("speed").innerText =
-        Math.round(speed * 80);
+    distance += speed * 2;
+    score = Math.floor(distance);
+
+    document.getElementById("speed").innerText = Math.round(speed * 80);
+    document.getElementById("dist").innerText = Math.floor(distance);
+    document.getElementById("score").innerText = score;
 
     renderer.render(scene, camera);
 }
 
-// =====================
+// ======================
 // START SCREEN
-// =====================
+// ======================
 function createStartScreen() {
 
-    const div = document.createElement("div");
-    div.style = `
-        position:fixed;top:0;left:0;width:100%;height:100%;
-        background:rgba(0,0,0,0.7);
-        display:flex;align-items:center;justify-content:center;
-        flex-direction:column;color:white;z-index:9999;
+    const s = document.createElement("div");
+    s.style = `
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    background:rgba(0,0,0,0.8);
+    display:flex;flex-direction:column;
+    justify-content:center;align-items:center;
+    color:white;z-index:9999;
     `;
 
-    div.innerHTML = `
-        <h1>🚙 Monster Truck Race</h1>
-        <button onclick="startGame()" style="padding:15px 30px;font-size:18px">
-            ابدأ اللعب
-        </button>
+    s.innerHTML = `
+    <h1>🚙 Monster Truck Race V2</h1>
+    <button onclick="startGame()" style="padding:15px 30px;font-size:18px">
+        Start Game
+    </button>
     `;
 
-    document.body.appendChild(div);
+    document.body.appendChild(s);
 }
 
 function startGame() {
@@ -306,13 +351,13 @@ function startGame() {
     document.querySelector("div").style.display = "none";
 }
 
-// =====================
+// ======================
 // RESIZE
-// =====================
+// ======================
 window.addEventListener("resize", () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(innerWidth, innerHeight);
 });
 
 </script>
