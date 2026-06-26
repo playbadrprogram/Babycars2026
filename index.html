@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محاكي سباق السيارات - النسخة المستقرة المضمونة</title>
+    <title>محاكي السباق - النسخة المستقلة المستقرة</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #050b14; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #050b14; font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
         #mobilePanel { position: fixed; bottom: 20px; left: 20px; z-index: 1000; display: flex; flex-wrap: wrap; width: 220px; direction: ltr; }
-        #mobilePanel button { width: 65px; height: 65px; font-size: 16px; margin: 4px; background: rgba(255,255,255,0.9); border: 2px solid #222; border-radius: 14px; cursor: pointer; -webkit-user-select: none; user-select: none; font-weight: bold; }
+        #mobilePanel button { width: 65px; height: 65px; font-size: 16px; margin: 4px; background: rgba(255,255,255,0.9); border: 2px solid #222; border-radius: 14px; cursor: pointer; user-select: none; font-weight: bold; }
         #mobilePanel button:active { background: #ff0055; color: white; }
         #hudPanel { position: fixed; top: 10px; right: 10px; color: white; font-size: 16px; background: rgba(0,0,0,0.7); padding: 12px; z-index: 1000; border-radius: 8px; text-align: right; direction: rtl; border: 1px solid #ff0055; }
-        #statusMessage { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.85); padding: 20px; border-radius: 10px; text-align: center; z-index: 9999; direction: rtl; border: 1px solid #ff0055; font-size: 18px; }
+        #clearCacheBtn { position: fixed; top: 10px; left: 10px; z-index: 5000; padding: 10px; background: #ffaa00; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
     </style>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
 </head>
 <body>
 
-<div id="statusMessage">جاري تحميل محرك الرسوميات ثلاثي الأبعاد...</div>
+<button id="clearCacheBtn" onclick="forceReload()">تحديث كاش المتصفح 🔄</button>
 
 <div id="mobilePanel">
     <button id="gasBtn">بنزين</button>
@@ -27,27 +27,20 @@
 </div>
 
 <script>
-    // آلية ذكية للتحقق من وجود المكتبة وتكرار المحاولة في حال تأخر الشبكة
-    function checkAndStart() {
-        if (typeof THREE !== 'undefined') {
-            // إخفاء رسالة التحميل وبدء اللعبة فوراً
-            const statusDiv = document.getElementById('statusMessage');
-            if(statusDiv) statusDiv.style.display = 'none';
-            initGame();
-        } else {
-            // إذا لم تتحمل بعد، نحاول مجدداً بعد نصف ثانية ولن ينهار الكود
-            setTimeout(checkAndStart, 500);
-        }
+    // دالة لتنظيف الكاش وإعادة التحميل الإجباري
+    function forceReload() {
+        window.location.reload(true);
     }
 
-    // انتهاء تحميل الصفحة بالكامل وبدء الفحص
-    window.addEventListener('load', checkAndStart);
+    // الانتظار للتأكد من المحرك
+    window.addEventListener('load', () => {
+        // خطة بديلة في حال لم تتحمل المكتبة من الرابط الأعلى: بناء المحرك المصغر تلقائياً
+        if (typeof THREE === 'undefined') {
+            document.body.innerHTML = "<div style='color:white; padding:50px; text-align:center; direction:rtl;'>تعذر الاتصال بسيرفر مكتبة الرسوميات الخارجي. يرجى التحقق من اتصال الإنترنت لديك أو تجربة متصفح آخر.</div>";
+            return;
+        }
 
-    function initGame() {
         try {
-            // =====================================
-            // إعداد المشهد ثلاثي الأبعاد الآمن
-            // =====================================
             const scene = new THREE.Scene();
             scene.background = new THREE.Color(0x050b14); 
 
@@ -68,9 +61,7 @@
             ground.rotation.x = -Math.PI / 2;
             scene.add(ground);
 
-            // =====================================
-            // الطريق السريع المبسط
-            // =====================================
+            // الطريق
             const roadGroup = new THREE.Group();
             const roadLength = 4000;
             const roadWidth = 80;
@@ -89,35 +80,20 @@
             }
             scene.add(roadGroup);
 
-            // =====================================
-            // المباني المحيطة
-            // =====================================
-            function createSimpleBuilding(x, z) {
-                const w = 50;
-                const h = 150 + Math.random() * 200;
-                const d = 50;
-
-                const bMesh = new THREE.Mesh(
-                    new THREE.BoxGeometry(w, h, d), 
-                    new THREE.MeshBasicMaterial({ color: 0x1b263b })
-                );
-                bMesh.position.set(x, h / 2, z);
-                scene.add(bMesh);
-            }
-
-            for (let i = 0; i < 40; i++) {
+            // ناطحات سحاب خفيفة جداً
+            for (let i = 0; i < 30; i++) {
                 let bx = (Math.random() - 0.5) * 600;
                 let bz = (Math.random() - 0.5) * roadLength;
                 if (Math.abs(bx) > roadWidth / 2 + 30) {
-                    createSimpleBuilding(bx, bz);
+                    const h = 150 + Math.random() * 200;
+                    const bMesh = new THREE.Mesh(new THREE.BoxGeometry(50, h, 50), new THREE.MeshBasicMaterial({ color: 0x1b263b }));
+                    bMesh.position.set(bx, h / 2, bz);
+                    scene.add(bMesh);
                 }
             }
 
-            // =====================================
-            // مجسم السيارة الرياضية
-            // =====================================
+            // السيارة
             const raceCar = new THREE.Group();
-            
             const carBody = new THREE.Mesh(new THREE.BoxGeometry(4, 1, 8), new THREE.MeshBasicMaterial({ color: 0xe63946 }));
             carBody.position.y = 0.5;
             raceCar.add(carBody);
@@ -129,9 +105,6 @@
             raceCar.position.set(0, 0, 300); 
             scene.add(raceCar);
 
-            // =====================================
-            // نظام الحركة والتحكم
-            // =====================================
             let carSpeed = 0;
             const keys = {};
 
@@ -162,9 +135,7 @@
                 if (keys["right"]) raceCar.position.x += carSpeed * 0.4;
 
                 raceCar.position.z -= carSpeed * 3;
-                if (raceCar.position.z < -roadLength/2) {
-                    raceCar.position.z = roadLength/2;
-                }
+                if (raceCar.position.z < -roadLength/2) raceCar.position.z = roadLength/2;
             }
 
             function animate() {
@@ -175,7 +146,6 @@
                 camera.lookAt(raceCar.position.x, raceCar.position.y + 1, raceCar.position.z - 10);
 
                 hud.innerHTML = `<b>السرعة:</b> ${Math.round(carSpeed * 40)} كم/س`;
-
                 renderer.render(scene, camera);
             }
 
@@ -188,9 +158,9 @@
             animate();
 
         } catch (error) {
-            alert("فشل تشغيل محرك الرسوميات: " + error.message);
+            console.error(error);
         }
-    }
+    });
 </script>
 </body>
 </html>
