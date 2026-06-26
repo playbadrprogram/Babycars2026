@@ -1,4 +1,3 @@
-<!-- PART 1 : BASE SETUP -->
 <!DOCTYPE html>
 <html lang="ar">
 <head>
@@ -7,24 +6,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-    body {
-        margin: 0;
-        overflow: hidden;
-        background: #87ceeb;
-        font-family: sans-serif;
-    }
+body {
+    margin: 0;
+    overflow: hidden;
+    background: #87ceeb;
+    font-family: sans-serif;
+}
 
-    #hud {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        color: white;
-        background: rgba(0,0,0,0.5);
-        padding: 10px;
-        border-radius: 8px;
-        font-size: 14px;
-        z-index: 10;
-    }
+#hud {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    color: white;
+    background: rgba(0,0,0,0.5);
+    padding: 10px;
+    border-radius: 8px;
+    z-index: 10;
+}
+
+#mobileControls {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 999;
+    display: flex;
+    gap: 10px;
+}
+button {
+    padding: 12px;
+    font-size: 16px;
+}
 </style>
 
 <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
@@ -32,20 +43,38 @@
 
 <body>
 
-<div id="hud">
-    السرعة: <span id="speed">0</span> km/h
+<div id="hud">السرعة: <span id="speed">0</span> km/h</div>
+
+<div id="mobileControls">
+<button onclick="tapKey('arrowup')">⬆️</button>
+<button onclick="tapKey('arrowleft')">⬅️</button>
+<button onclick="tapKey('arrowdown')">⬇️</button>
+<button onclick="tapKey('arrowright')">➡️</button>
 </div>
 
 <script>
 
-// ==========================
+// =====================
 // BASIC SETUP
-// ==========================
+// =====================
 let scene, camera, renderer;
+let car, speed = 0;
+let maxSpeed = 2.5;
+let keys = {};
+let started = false;
+let paused = false;
+let isCrashed = false;
+
+let trafficCars = [];
+let lanes = [-4, 0, 4];
 
 init();
+createStartScreen();
 animate();
 
+// =====================
+// INIT
+// =====================
 function init() {
 
     scene = new THREE.Scene();
@@ -62,38 +91,25 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Lights
-    const ambient = new THREE.AmbientLight(0xffffff, 0.8);
-    scene.add(ambient);
+    const light1 = new THREE.AmbientLight(0xffffff, 0.8);
+    const light2 = new THREE.DirectionalLight(0xffffff, 1);
+    light2.position.set(50, 100, 50);
 
-    const sun = new THREE.DirectionalLight(0xffffff, 1);
-    sun.position.set(50, 100, 50);
-    scene.add(sun);
+    scene.add(light1, light2);
 
-    // Camera start position
     camera.position.set(0, 5, 10);
+
     createEnvironment();
     car = createCar();
     initTraffic();
 }
 
-    //________
-    // part 2
-    //________
-
-    <!-- PART 2 : ENVIRONMENT -->
-<script>
-
-// ==========================
-// ENVIRONMENT OBJECTS
-// ==========================
-let road, grass;
-let trees = [];
-
+// =====================
+// ENVIRONMENT
+// =====================
 function createEnvironment() {
 
-    // ===== Ground (Grass) =====
-    grass = new THREE.Mesh(
+    const grass = new THREE.Mesh(
         new THREE.PlaneGeometry(2000, 2000),
         new THREE.MeshLambertMaterial({ color: 0x4caf50 })
     );
@@ -101,274 +117,132 @@ function createEnvironment() {
     grass.position.y = -0.5;
     scene.add(grass);
 
-    // ===== Road =====
-    road = new THREE.Mesh(
+    const road = new THREE.Mesh(
         new THREE.BoxGeometry(20, 0.5, 2000),
         new THREE.MeshLambertMaterial({ color: 0x333333 })
     );
-    road.position.y = 0;
     scene.add(road);
 
-    // ===== Road Lines =====
-    for (let i = 0; i < 80; i++) {
-
+    for (let i = 0; i < 60; i++) {
         const line = new THREE.Mesh(
             new THREE.BoxGeometry(0.3, 0.1, 5),
             new THREE.MeshLambertMaterial({ color: 0xffffff })
         );
-
         line.position.set(0, 0.3, -i * 25);
         scene.add(line);
     }
-
-    // ===== Simple Trees (Optimized for Mobile) =====
-    for (let i = 0; i < 60; i++) {
-
-        let x = (Math.random() > 0.5 ? 1 : -1) * (15 + Math.random() * 40);
-        let z = -Math.random() * 1500;
-
-        const tree = new THREE.Group();
-
-        const trunk = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.3, 0.5, 3),
-            new THREE.MeshLambertMaterial({ color: 0x8d6e63 })
-        );
-
-        const leaves = new THREE.Mesh(
-            new THREE.ConeGeometry(2, 5, 8),
-            new THREE.MeshLambertMaterial({ color: 0x2e7d32 })
-        );
-
-        trunk.position.y = 1.5;
-        leaves.position.y = 5;
-
-        tree.add(trunk);
-        tree.add(leaves);
-
-        tree.position.set(x, 0, z);
-
-        scene.add(tree);
-        trees.push(tree);
-    }
-
-    // ===== Simple Hills =====
-    for (let i = 0; i < 10; i++) {
-
-        const hill = new THREE.Mesh(
-            new THREE.SphereGeometry(10 + Math.random() * 20, 16, 16),
-            new THREE.MeshLambertMaterial({ color: 0x388e3c })
-        );
-
-        hill.scale.y = 0.5;
-        hill.position.set((Math.random()-0.5)*200, -2, -Math.random()*1000);
-
-        scene.add(hill);
-    }
 }
 
-</script>
-    <!-- PART 3 : PLAYER CAR -->
-<script>
-
-// ==========================
-// PLAYER CAR
-// ==========================
-let car;
-let speed = 0;
-let maxSpeed = 2.5;
-let acceleration = 0.02;
-let friction = 0.01;
-
-let keys = {};
-
+// =====================
+// CAR
+// =====================
 function createCar() {
 
-    const carGroup = new THREE.Group();
+    const car = new THREE.Group();
 
-    // ===== Body =====
     const body = new THREE.Mesh(
         new THREE.BoxGeometry(3, 1.2, 6),
         new THREE.MeshLambertMaterial({ color: 0xe63946 })
     );
     body.position.y = 1.5;
-    carGroup.add(body);
 
-    // ===== Cabin =====
-    const cabin = new THREE.Mesh(
-        new THREE.BoxGeometry(2.5, 1, 3),
-        new THREE.MeshLambertMaterial({ color: 0x222222 })
-    );
-    cabin.position.set(0, 2.3, -0.5);
-    carGroup.add(cabin);
+    car.add(body);
+    car.position.set(0, 0, 5);
+    scene.add(car);
 
-    // ===== Wheels =====
-    const wheelGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.6, 16);
-    const wheelMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
-
-    const wheelPositions = [
-        [-1.5, 1, 2],
-        [1.5, 1, 2],
-        [-1.5, 1, -2],
-        [1.5, 1, -2],
-    ];
-
-    wheelPositions.forEach(pos => {
-        const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-        wheel.rotation.z = Math.PI / 2;
-        wheel.position.set(pos[0], pos[1], pos[2]);
-        carGroup.add(wheel);
-    });
-
-    carGroup.position.set(0, 0, 5);
-
-    scene.add(carGroup);
-    return carGroup;
+    return car;
 }
 
-// ==========================
-// CONTROLS
-// ==========================
-window.addEventListener("keydown", (e) => keys[e.key.toLowerCase()] = true);
-window.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false);
-
-// ==========================
-// UPDATE CAR MOVEMENT
-// ==========================
-function updateCar() {
-
-    if (!car) return;
-
-    // acceleration
-    if (keys["w"] || keys["arrowup"]) {
-        speed += acceleration;
-    }
-
-    // brake
-    if (keys["s"] || keys["arrowdown"]) {
-        speed -= acceleration * 1.5;
-    }
-
-    // friction
-    speed *= (1 - friction);
-
-    // clamp speed
-    speed = Math.max(0, Math.min(maxSpeed, speed));
-
-    // steering
-    if (keys["a"] || keys["arrowleft"]) {
-        car.position.x -= 0.15;
-        car.rotation.y = 0.2;
-    } 
-    else if (keys["d"] || keys["arrowright"]) {
-        car.position.x += 0.15;
-        car.rotation.y = -0.2;
-    } 
-    else {
-        car.rotation.y = 0;
-    }
-
-    // move forward
-    car.position.z -= speed * 2;
-
-    // update camera follow (simple)
-    camera.position.x += (car.position.x - camera.position.x) * 0.1;
-    camera.position.z = car.position.z + 10;
-    camera.position.y = 6;
-    camera.lookAt(car.position.x, car.position.y, car.position.z - 10);
-
-    // HUD speed
-    document.getElementById("speed").innerText = Math.round(speed * 80);
-}
-
-</script>
-
-
-    <!-- PART 4 : TRAFFIC CARS + COLLISION -->
-<script>
-
-// ==========================
-// TRAFFIC SYSTEM
-// ==========================
-let trafficCars = [];
-let lanes = [-4, 0, 4];
-
-function createTrafficCar(color = 0x2196f3) {
+// =====================
+// TRAFFIC
+// =====================
+function createTrafficCar() {
 
     const car = new THREE.Group();
 
     const body = new THREE.Mesh(
         new THREE.BoxGeometry(2.5, 1, 4.5),
-        new THREE.MeshLambertMaterial({ color })
+        new THREE.MeshLambertMaterial({ color: 0x2196f3 })
     );
     body.position.y = 1.2;
-    car.add(body);
 
-    const cabin = new THREE.Mesh(
-        new THREE.BoxGeometry(2, 0.8, 2),
-        new THREE.MeshLambertMaterial({ color: 0x111111 })
-    );
-    cabin.position.set(0, 1.8, -0.5);
-    car.add(cabin);
+    car.add(body);
 
     car.position.set(
         lanes[Math.floor(Math.random() * lanes.length)],
         0,
-        carZSpawn()
+        car.position.z - 200 - Math.random() * 300
     );
 
     scene.add(car);
     return car;
 }
 
-function carZSpawn() {
-    return car.position ? car.position.z - 100 - Math.random() * 300 : -200;
-}
-
-// ==========================
-// INIT TRAFFIC
-// ==========================
 function initTraffic() {
-
-    for (let i = 0; i < 8; i++) {
-        const car = createTrafficCar(
-            [0xff9800, 0x03a9f4, 0x4caf50, 0xe91e63][Math.floor(Math.random() * 4)]
-        );
-
-        trafficCars.push(car);
+    for (let i = 0; i < 6; i++) {
+        trafficCars.push(createTrafficCar());
     }
 }
 
-// ==========================
-// UPDATE TRAFFIC
-// ==========================
-function updateTraffic() {
+// =====================
+// INPUT
+// =====================
+window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+function tapKey(k) {
+    keys[k] = true;
+    setTimeout(() => keys[k] = false, 150);
+}
+
+// =====================
+// UPDATE CAR
+// =====================
+function updateCar() {
 
     if (!car) return;
 
-    trafficCars.forEach(tCar => {
+    if (keys["w"] || keys["arrowup"]) speed += 0.02;
+    if (keys["s"] || keys["arrowdown"]) speed -= 0.03;
 
-        tCar.position.z += 0.5 + speed * 2;
+    speed *= 0.98;
+    speed = Math.max(0, Math.min(maxSpeed, speed));
 
-        // respawn
-        if (tCar.position.z > car.position.z + 20) {
-            tCar.position.z = car.position.z - 200 - Math.random() * 300;
-            tCar.position.x = lanes[Math.floor(Math.random() * lanes.length)];
+    if (keys["a"] || keys["arrowleft"]) car.position.x -= 0.15;
+    if (keys["d"] || keys["arrowright"]) car.position.x += 0.15;
+
+    car.position.z -= speed * 2;
+
+    camera.position.x += (car.position.x - camera.position.x) * 0.1;
+    camera.position.z = car.position.z + 10;
+    camera.position.y = 6;
+    camera.lookAt(car.position);
+}
+
+// =====================
+// TRAFFIC UPDATE
+// =====================
+function updateTraffic() {
+
+    trafficCars.forEach(t => {
+
+        t.position.z += 0.5 + speed * 2;
+
+        if (t.position.z > car.position.z + 20) {
+            t.position.z = car.position.z - 200 - Math.random() * 300;
+            t.position.x = lanes[Math.floor(Math.random() * lanes.length)];
         }
 
-        // collision detection
-        if (Math.abs(tCar.position.x - car.position.x) < 2 &&
-            Math.abs(tCar.position.z - car.position.z) < 3) {
-
+        if (Math.abs(t.position.x - car.position.x) < 2 &&
+            Math.abs(t.position.z - car.position.z) < 3) {
             crash();
         }
     });
 }
 
-// ==========================
-// CRASH SYSTEM
-// ==========================
-let isCrashed = false;
-
+// =====================
+// CRASH
+// =====================
 function crash() {
 
     if (isCrashed) return;
@@ -378,275 +252,70 @@ function crash() {
 
     alert("💥 لقد اصطدمت!");
 
-    setTimeout(() => {
-        resetGame();
-    }, 1000);
+    setTimeout(resetGame, 1000);
 }
 
 function resetGame() {
-
     isCrashed = false;
     car.position.set(0, 0, 5);
     speed = 0;
-
-    trafficCars.forEach((t, i) => {
-        t.position.z = car.position.z - 100 - i * 50;
-        t.position.x = lanes[Math.floor(Math.random() * lanes.length)];
-    });
 }
 
-</script>
-
-    <!-- PART 5 : CAMERA + EFFECTS + SOUND -->
-<script>
-
-// ==========================
-// CAMERA SMOOTH FOLLOW
-// ==========================
-function updateCamera() {
-
-    if (!car) return;
-
-    const targetX = car.position.x;
-    const targetY = car.position.y + 6;
-    const targetZ = car.position.z + 12;
-
-    camera.position.x += (targetX - camera.position.x) * 0.08;
-    camera.position.y += (targetY - camera.position.y) * 0.08;
-    camera.position.z += (targetZ - camera.position.z) * 0.08;
-
-    camera.lookAt(
-        car.position.x,
-        car.position.y + 1,
-        car.position.z - 10
-    );
-}
-
-// ==========================
-// WHEEL ROTATION (VISUAL ONLY)
-// ==========================
-function rotateWheels() {
-
-    if (!car) return;
-
-    car.traverse((obj) => {
-
-        if (obj.isMesh && obj.geometry.type === "CylinderGeometry") {
-            obj.rotation.x += speed * 0.5;
-        }
-
-    });
-}
-
-// ==========================
-// ENGINE SOUND (OPTIONAL FILES)
-// ==========================
-let engineSound = new Audio("sounds/engine.mp3");
-engineSound.loop = true;
-engineSound.volume = 0.4;
-
-function updateSound() {
-
-    if (speed > 0.1) {
-
-        if (engineSound.paused) {
-            engineSound.play().catch(() => {});
-        }
-
-        engineSound.playbackRate = 0.8 + speed;
-
-    } else {
-        engineSound.pause();
-    }
-}
-
-// ==========================
-// SCREEN SHAKE ON CRASH
-// ==========================
-let shakeTime = 0;
-
-function cameraShake() {
-
-    if (shakeTime > 0) {
-        camera.position.x += (Math.random() - 0.5) * 0.2;
-        camera.position.y += (Math.random() - 0.5) * 0.2;
-        shakeTime--;
-    }
-}
-
-// ==========================
-// IMPROVED CRASH EFFECT
-// ==========================
-function crashEffect() {
-
-    shakeTime = 20;
-
-    const flash = new THREE.Mesh(
-        new THREE.SphereGeometry(2),
-        new THREE.MeshBasicMaterial({ color: 0xff0000 })
-    );
-
-    flash.position.copy(car.position);
-    scene.add(flash);
-
-    setTimeout(() => {
-        scene.remove(flash);
-    }, 200);
-}
-
-// تعديل دالة crash السابقة
-function crash() {
-
-    if (isCrashed) return;
-
-    isCrashed = true;
-    speed = 0;
-
-    crashEffect();
-
-    setTimeout(() => {
-        resetGame();
-    }, 1200);
-}
-
-
-
-    
-    function animate() {
+// =====================
+// LOOP
+// =====================
+function animate() {
     requestAnimationFrame(animate);
 
-    // update loop (next parts will use it)
-    update();
+    if (!started || paused) return;
+
+    updateCar();
+    updateTraffic();
+
+    document.getElementById("speed").innerText =
+        Math.round(speed * 80);
 
     renderer.render(scene, camera);
 }
 
-function update() {
-    updateCar();
-    updateTraffic();
-    updateCamera();
-    rotateWheels();
-    updateSound();
-    cameraShake();
+// =====================
+// START SCREEN
+// =====================
+function createStartScreen() {
+
+    const div = document.createElement("div");
+    div.style = `
+        position:fixed;top:0;left:0;width:100%;height:100%;
+        background:rgba(0,0,0,0.7);
+        display:flex;align-items:center;justify-content:center;
+        flex-direction:column;color:white;z-index:9999;
+    `;
+
+    div.innerHTML = `
+        <h1>🚙 Monster Truck Race</h1>
+        <button onclick="startGame()" style="padding:15px 30px;font-size:18px">
+            ابدأ اللعب
+        </button>
+    `;
+
+    document.body.appendChild(div);
 }
 
-// Resize fix
+function startGame() {
+    started = true;
+    document.querySelector("div").style.display = "none";
+}
+
+// =====================
+// RESIZE
+// =====================
 window.addEventListener("resize", () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-
-
- <!-- PART 6 : UI + SCORE + START MENU -->
-<script>
-
-// ==========================
-// GAME STATE
-// ==========================
-let started = false;
-let distance = 0;
-let score = 0;
-let paused = false;
-
-// ==========================
-// START SCREEN
-// ==========================
-const startScreen = document.createElement("div");
-startScreen.style = `
-position:fixed;top:0;left:0;width:100%;height:100%;
-background:rgba(0,0,0,0.7);
-display:flex;align-items:center;justify-content:center;
-flex-direction:column;color:white;z-index:9999;
-font-family:sans-serif;
-`;
-
-startScreen.innerHTML = `
-<h1>🚙 Monster Truck Race</h1>
-<button style="padding:15px 30px;font-size:18px;cursor:pointer"
-onclick="startGame()">ابدأ اللعب</button>
-`;
-
-document.body.appendChild(startScreen);
-
-function startGame() {
-    started = true;
-    startScreen.style.display = "none";
-}
-
-// ==========================
-// UI HUD UPDATE
-// ==========================
-function updateUI() {
-
-    if (!started || isCrashed) return;
-
-    distance += speed * 2;
-    score = Math.floor(distance);
-
-    document.getElementById("speed").innerText = Math.round(speed * 80);
-
-    // إنشاء HUD إذا غير موجود
-    let hud = document.getElementById("hudExtra");
-
-    if (!hud) {
-        hud = document.createElement("div");
-        hud.id = "hudExtra";
-        hud.style = `
-        position:fixed;top:60px;right:10px;
-        background:rgba(0,0,0,0.5);
-        color:white;padding:10px;border-radius:8px;
-        z-index:10;font-size:14px;
-        `;
-        document.body.appendChild(hud);
-    }
-
-    hud.innerHTML = `
-        🏁 المسافة: ${Math.floor(distance)} m<br>
-        ⭐ النقاط: ${score}
-    `;
-}
-
-// ==========================
-// PAUSE SYSTEM
-// ==========================
-window.addEventListener("keydown", (e) => {
-    if (e.key === "p") {
-        paused = !paused;
-    }
-});
-
-// تعديل update الرئيسي
-const oldUpdate = update;
-
-update = function () {
-
-    if (!started || paused) return;
-
-    oldUpdate();
-    updateUI();
-};
-
 </script>
-    
+
 </body>
-    <div id="mobileControls" style="
-position:fixed;bottom:20px;left:20px;z-index:999;
-display:flex;gap:10px;
-">
-
-<button onclick="keys['arrowup']=true;setTimeout(()=>keys['arrowup']=false,200)"
-style="padding:15px">⬆️</button>
-
-<button onclick="keys['arrowleft']=true;setTimeout(()=>keys['arrowleft']=false,200)"
-style="padding:15px">⬅️</button>
-
-<button onclick="keys['arrowdown']=true;setTimeout(()=>keys['arrowdown']=false,200)"
-style="padding:15px">⬇️</button>
-
-<button onclick="keys['arrowright']=true;setTimeout(()=>keys['arrowright']=false,200)"
-style="padding:15px">➡️</button>
-
-</div>
 </html>
